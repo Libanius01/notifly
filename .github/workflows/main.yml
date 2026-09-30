@@ -12,7 +12,7 @@
            id: buildozer
            with:
              command: buildozer android debug
-             buildozer_version: stable
+             buildozer_version: master
          - name: Upload APK
            uses: actions/upload-artifact@v4
            with:
