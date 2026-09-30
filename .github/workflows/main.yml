@@ -33,23 +33,18 @@ jobs:
             automake libtool pkg-config cmake unzip zip openjdk-17-jdk \
             libssl-dev libffi-dev lld aidl
 
-      - name: Setup Buildozer SDK Link
+      - name: Pre-install Android SDK for Buildozer
         run: |
           BUILDOZER_SDK_DIR="$HOME/.buildozer/android/platform/android-sdk"
-          mkdir -p "$BUILDOZER_SDK_DIR/cmdline-tools"
-          mkdir -p "$BUILDOZER_SDK_DIR/tools/bin"
+          mkdir -p "$BUILDOZER_SDK_DIR"
           
-          # Mevcut araçları bağlıyoruz
-          ln -sf $ANDROID_HOME/cmdline-tools/latest "$BUILDOZER_SDK_DIR/cmdline-tools/latest"
-          ln -sf $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "$BUILDOZER_SDK_DIR/tools/bin/sdkmanager"
-          ln -sf $ANDROID_HOME/cmdline-tools/latest/bin/avdmanager "$BUILDOZER_SDK_DIR/tools/bin/avdmanager"
-          ln -sf $ANDROID_HOME/build-tools "$BUILDOZER_SDK_DIR/build-tools"
+          # GitHub sunucusundaki araçları Buildozer'ın dizinine fiziksel olarak kopyalıyoruz
+          cp -a $ANDROID_HOME/cmdline-tools "$BUILDOZER_SDK_DIR/"
           
-          # YENİ EKLENEN ÇÖZÜM: platforms klasörünü de Buildozer'a bağlıyoruz
-          ln -sf $ANDROID_HOME/platforms "$BUILDOZER_SDK_DIR/platforms"
-          
-          # API 33 paketlerinin kesin kurulu olduğundan emin oluyoruz ve lisansları kabul ediyoruz
-          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-33" "build-tools;33.0.2" --licenses || true
+          # Sdkmanager'ı doğrudan Buildozer'ın dizininde çalıştırıp API 33'ü oraya kurduruyoruz
+          SDKMANAGER="$BUILDOZER_SDK_DIR/cmdline-tools/latest/bin/sdkmanager"
+          yes | $SDKMANAGER --sdk_root="$BUILDOZER_SDK_DIR" --licenses >/dev/null || true
+          $SDKMANAGER --sdk_root="$BUILDOZER_SDK_DIR" "platforms;android-33" "build-tools;33.0.2" "platform-tools"
 
       - name: Install Buildozer and Cython
         run: |
