@@ -25,7 +25,6 @@ jobs:
       - name: Install System Dependencies
         run: |
           sudo apt-get update
-          # SONA "aidl" EKLENDİ - SİSTEMDE ZORLA KURULACAK
           sudo apt-get install -y \
             build-essential git ffmpeg libsdl2-dev libsdl2-image-dev \
             libsdl2-mixer-dev libsdl2-ttf-dev libportmidi-dev libswscale-dev \
@@ -40,14 +39,17 @@ jobs:
           mkdir -p "$BUILDOZER_SDK_DIR/cmdline-tools"
           mkdir -p "$BUILDOZER_SDK_DIR/tools/bin"
           
+          # Mevcut araçları bağlıyoruz
           ln -sf $ANDROID_HOME/cmdline-tools/latest "$BUILDOZER_SDK_DIR/cmdline-tools/latest"
           ln -sf $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "$BUILDOZER_SDK_DIR/tools/bin/sdkmanager"
           ln -sf $ANDROID_HOME/cmdline-tools/latest/bin/avdmanager "$BUILDOZER_SDK_DIR/tools/bin/avdmanager"
-          
-          # HATA VEREN YERİN ÇÖZÜMÜ: GitHub'daki build-tools'u Buildozer'a zorla yediriyoruz
           ln -sf $ANDROID_HOME/build-tools "$BUILDOZER_SDK_DIR/build-tools"
           
-          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+          # YENİ EKLENEN ÇÖZÜM: platforms klasörünü de Buildozer'a bağlıyoruz
+          ln -sf $ANDROID_HOME/platforms "$BUILDOZER_SDK_DIR/platforms"
+          
+          # API 33 paketlerinin kesin kurulu olduğundan emin oluyoruz ve lisansları kabul ediyoruz
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-33" "build-tools;33.0.2" --licenses || true
 
       - name: Install Buildozer and Cython
         run: |
