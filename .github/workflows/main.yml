@@ -53,17 +53,96 @@ jobs:
             libffi-dev \
             lld
 
-      - name: Prepare Android SDK & Build-Tools
+      - name: Setup Android SDK Components & Fix sdkmanager path
         run: |
-          # Ensure build-tools 33.0.2 is installed on the runner host
-          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
-          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "build-tools;33.0.2" "platforms;android-33"
+          # Use GitHub's modern SDK manager to install packages
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses \vert{}\vert{} true$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "build-tools;33.0.2" "platforms;android-33" "platform-tools"
+          
+          # Fix Buildozer's expected path for sdkmanager
+          # Buildozer looks for it at $ANDROID_HOME/tools/bin/sdkmanager
+          mkdir -p $ANDROID_HOME/tools/bin
+          ln -sf $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager$ANDROID_HOME/tools/bin/sdkmanager
+          ln -sf $ANDROID_HOME/cmdline-tools/latest/bin/avdmanager$ANDROID_HOME/tools/bin/avdBuildozer is stubbornly ignoring the system SDK path and creating its own SDK folder at `~/.buildozer/android/platform/android-sdk`, but Google recently changed the folder structure of the Android SDK tools from `tools/bin` to `cmdline-tools/latest/bin`, causing Buildozer to fail to find it.
 
-          # Pre-create Buildozer SDK path and link system Android SDK tools
-          mkdir -p ~/.buildozer/android/platform/android-sdk
-          ln -s $ANDROID_HOME/build-tools ~/.buildozer/android/platform/android-sdk/build-tools
-          ln -s $ANDROID_HOME/platforms ~/.buildozer/android/platform/android-sdk/platforms
-          ln -s $ANDROID_HOME/platform-tools ~/.buildozer/android/platform/android-sdk/platform-tools
+To fix this once and for all, we will trick Buildozer by explicitly creating the folder structure it is looking for inside its own `.buildozer` directory *before* it runs.
+
+### Final `.github/workflows/main.yml` Fix
+
+Replace your entire workflow file with this configuration. This creates the exact directories Buildozer expects (`tools/bin/sdkmanager`) and links them directly to the modern tools provided by GitHub:
+
+```yaml
+name: Build APK
+
+on:
+  workflow_dispatch:
+  push:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Set up Java JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Install System Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            git \
+            ffmpeg \
+            libsdl2-dev \
+            libsdl2-image-dev \
+            libsdl2-mixer-dev \
+            libsdl2-ttf-dev \
+            libportmidi-dev \
+            libswscale-dev \
+            libavformat-dev \
+            libavcodec-dev \
+            zlib1g-dev \
+            libgstreamer1.0-dev \
+            gstreamer1.0-plugins-base \
+            gstreamer1.0-plugins-good \
+            autoconf \
+            automake \
+            libtool \
+            pkg-config \
+            cmake \
+            unzip \
+            zip \
+            openjdk-17-jdk \
+            libssl-dev \
+            libffi-dev \
+            lld
+
+      - name: Fix Buildozer SDK Paths
+        run: |
+          # Create Buildozer's internal SDK directory
+          BUILDOZER_SDK_DIR="$HOME/.buildozer/android/platform/android-sdk"
+          mkdir -p "$BUILDOZER_SDK_DIR/cmdline-tools"
+          mkdir -p "$BUILDOZER_SDK_DIR/tools/bin"
+          
+          # Link GitHub's pre-installed SDK components into Buildozer's folder
+          ln -sf $ANDROID_HOME/cmdline-tools/latest "$BUILDOZER_SDK_DIR/cmdline-tools/latest"
+          ln -sf $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "$BUILDOZER_SDK_DIR/tools/bin/sdkmanager"
+          ln -sf $ANDROID_HOME/cmdline-tools/latest/bin/avdmanager "$BUILDOZER_SDK_DIR/tools/bin/avdmanager"
+          ln -sf $ANDROID_HOME/build-tools "$BUILDOZER_SDK_DIR/build-tools"
+          ln -sf $ANDROID_HOME/platforms "$BUILDOZER_SDK_DIR/platforms"
+          ln -sf $ANDROID_HOME/platform-tools "$BUILDOZER_SDK_DIR/platform-tools"
+          
+          # Accept licenses
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
       - name: Install Buildozer and Cython
         run: |
@@ -73,8 +152,6 @@ jobs:
       - name: Build Android APK
         env:
           APP_ALLOW_MISSING_DEPS: "true"
-          ANDROIDSDK: "/usr/local/lib/android/sdk"
-          ANDROID_HOME: "/usr/local/lib/android/sdk"
         run: |
           buildozer -v android debug
 
