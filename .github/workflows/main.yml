@@ -53,10 +53,17 @@ jobs:
             libffi-dev \
             lld
 
-      - name: Install Android Build-Tools & AIDL
+      - name: Prepare Android SDK & Build-Tools
         run: |
+          # Ensure build-tools 33.0.2 is installed on the runner host
           yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
           $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "build-tools;33.0.2" "platforms;android-33"
+
+          # Pre-create Buildozer SDK path and link system Android SDK tools
+          mkdir -p ~/.buildozer/android/platform/android-sdk
+          ln -s $ANDROID_HOME/build-tools ~/.buildozer/android/platform/android-sdk/build-tools
+          ln -s $ANDROID_HOME/platforms ~/.buildozer/android/platform/android-sdk/platforms
+          ln -s $ANDROID_HOME/platform-tools ~/.buildozer/android/platform/android-sdk/platform-tools
 
       - name: Install Buildozer and Cython
         run: |
@@ -66,6 +73,8 @@ jobs:
       - name: Build Android APK
         env:
           APP_ALLOW_MISSING_DEPS: "true"
+          ANDROIDSDK: "/usr/local/lib/android/sdk"
+          ANDROID_HOME: "/usr/local/lib/android/sdk"
         run: |
           buildozer -v android debug
 
