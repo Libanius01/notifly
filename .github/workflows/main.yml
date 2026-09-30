@@ -36,15 +36,17 @@ jobs:
       - name: Pre-install Android SDK for Buildozer
         run: |
           BUILDOZER_SDK_DIR="$HOME/.buildozer/android/platform/android-sdk"
-          mkdir -p "$BUILDOZER_SDK_DIR"
+          mkdir -p "$BUILDOZER_SDK_DIR/tools"
+          mkdir -p "$BUILDOZER_SDK_DIR/cmdline-tools"
           
-          # GitHub sunucusundaki araçları Buildozer'ın dizinine fiziksel olarak kopyalıyoruz
+          # GitHub SDK'sını her iki klasör yoluna da kopyalıyoruz (eski ve yeni tip uyumluluğu için)
           cp -a $ANDROID_HOME/cmdline-tools "$BUILDOZER_SDK_DIR/"
+          cp -a $ANDROID_HOME/cmdline-tools/latest/* "$BUILDOZER_SDK_DIR/tools/"
           
-          # Sdkmanager'ı doğrudan Buildozer'ın dizininde çalıştırıp API 33'ü oraya kurduruyoruz
-          SDKMANAGER="$BUILDOZER_SDK_DIR/cmdline-tools/latest/bin/sdkmanager"
-          yes | $SDKMANAGER --sdk_root="$BUILDOZER_SDK_DIR" --licenses >/dev/null || true
-          $SDKMANAGER --sdk_root="$BUILDOZER_SDK_DIR" "platforms;android-33" "build-tools;33.0.2" "platform-tools"
+          # Sdkmanager ile API 33 ve gerekli araçları kuruyoruz
+          SDKMANAGER="$BUILDOZER_SDK_DIR/tools/bin/sdkmanager"
+          yes | "$SDKMANAGER" --sdk_root="$BUILDOZER_SDK_DIR" --licenses >/dev/null || true
+          "$SDKMANAGER" --sdk_root="$BUILDOZER_SDK_DIR" "platforms;android-33" "build-tools;33.0.2" "platform-tools"
 
       - name: Install Buildozer and Cython
         run: |
