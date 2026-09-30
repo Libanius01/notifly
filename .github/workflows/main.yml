@@ -22,7 +22,7 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Install System & Build Dependencies
+      - name: Install System Dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -53,15 +53,16 @@ jobs:
             libffi-dev \
             lld
 
-      - name: Install Buildozer & Cython
+      - name: Install Buildozer and Cython
         run: |
           pip install --upgrade pip setuptools
           pip install "cython<3.0.0" buildozer
 
       - name: Build Android APK
+        env:
+          APP_ALLOW_MISSING_DEPS: "true"
         run: |
-          # Automatically accept SDK/NDK licenses and run in verbose mode (-v)
-          yes | buildozer -v android debug
+          buildozer -v android debug
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
