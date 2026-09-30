@@ -53,33 +53,28 @@ jobs:
             libffi-dev \
             lld
 
-      - name: Fix Buildozer SDK Paths
+      - name: Fix SDK Manager Link & Licenses
         run: |
-          # Create Buildozer's internal SDK directory
-          BUILDOZER_SDK_DIR="$HOME/.buildozer/android/platform/android-sdk"
-          mkdir -p "$BUILDOZER_SDK_DIR/cmdline-tools"
-          mkdir -p "$BUILDOZER_SDK_DIR/tools/bin"
-          
-          # Link GitHub's pre-installed SDK components into Buildozer's folder
-          ln -sf $ANDROID_HOME/cmdline-tools/latest "$BUILDOZER_SDK_DIR/cmdline-tools/latest"
-          ln -sf $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "$BUILDOZER_SDK_DIR/tools/bin/sdkmanager"
-          ln -sf $ANDROID_HOME/cmdline-tools/latest/bin/avdmanager "$BUILDOZER_SDK_DIR/tools/bin/avdmanager"
-          ln -sf $ANDROID_HOME/build-tools "$BUILDOZER_SDK_DIR/build-tools"
-          ln -sf $ANDROID_HOME/platforms "$BUILDOZER_SDK_DIR/platforms"
-          ln -sf $ANDROID_HOME/platform-tools "$BUILDOZER_SDK_DIR/platform-tools"
-          
-          # Accept licenses
+          # Ensure sdkmanager licenses are accepted
           yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
-      - name: Install Buildozer and Cython
+      - name: Install Buildozer and Compatible Cython
         run: |
-          pip install --upgrade pip setuptools
-          pip install "cython<3.0.0" buildozer
+          python -m pip install --upgrade pip setuptools
+          python -m pip install "cython==0.29.36" buildozer
 
       - name: Build Android APK
         env:
           APP_ALLOW_MISSING_DEPS: "true"
+          # OVERRIDE & UNSET GitHub's system NDK variables to prevent mixing NDK versions
+          ANDROID_NDK_HOME: ""
+          ANDROID_NDK_ROOT: ""
+          ANDROID_NDK: ""
         run: |
+          # Clean any existing corrupted build caches
+          buildozer android clean || true
+          
+          # Run buildozer with debug verbosity
           buildozer -v android debug
 
       - name: Upload APK Artifact
