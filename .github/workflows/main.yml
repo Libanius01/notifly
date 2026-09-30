@@ -70,7 +70,11 @@ jobs:
         run: |
           python -m pip install --upgrade pip setuptools
           python -m pip install "cython==0.29.36" buildozer
-
+      - name: Install AIDL and Build Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install aidl
+          
       - name: Build Android APK
         env:
           APP_ALLOW_MISSING_DEPS: "true"
